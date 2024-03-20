@@ -6,7 +6,7 @@ from rest_framework.validators import UniqueValidator
 from users.models import User
 
 
-class AuthSignupSerializer(serializers.Serializer, ABC):
+class AuthSignupSerializer(serializers.Serializer):
     email = serializers.EmailField(
         required=True,
         max_length=254,
@@ -26,7 +26,7 @@ class AuthSignupSerializer(serializers.Serializer, ABC):
         return data
 
 
-class GetJWTTokenSerializer(serializers.Serializer, ABC):
+class GetJWTTokenSerializer(serializers.Serializer):
     username = serializers.CharField(required=True)
     confirmation_code = serializers.CharField(required=True)
 

@@ -4,7 +4,7 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.getenv('SECRET_KEY', default='default-value')
-DEBUG = os.getenv('DEBUG', default=False)
+DEBUG = os.getenv('DEBUG', default=True)
 DB_SQLITE = os.getenv('DB_SQLITE', default=False)
 ALLOWED_HOSTS = [os.getenv('HOSTS', default='*')]
 
@@ -17,8 +17,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'api.apps.ApiConfig',
-    'reviews.apps.ReviewsConfig',
     'users.apps.UsersConfig',
+    'drf_yasg',
 ]
 
 MIDDLEWARE = [
@@ -54,24 +54,24 @@ WSGI_APPLICATION = 'api_yamdb.wsgi.application'
 
 
 # Database
-if DB_SQLITE:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
-        }
+# if DB_SQLITE:
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
     }
-else:
-    DATABASES = {
-        'default': {
-            'ENGINE': os.getenv('DB_ENGINE', default="django.db.backends.postgresql"),
-            'NAME': os.getenv('DB_NAME', default="postgres"),
-            'USER': os.getenv('POSTGRES_USER', default="postgres"),
-            'PASSWORD': os.getenv('POSTGRES_PASSWORD', default="postgres"),
-            'HOST': os.getenv('DB_HOST', default="db"),
-            'PORT': os.getenv('DB_PORT', default="5432")
-        }
-    }
+}
+# else:
+#     DATABASES = {
+#         'default': {
+#             'ENGINE': os.getenv('DB_ENGINE', default="django.db.backends.postgresql"),
+#             'NAME': os.getenv('DB_NAME', default="postgres"),
+#             'USER': os.getenv('POSTGRES_USER', default="postgres"),
+#             'PASSWORD': os.getenv('POSTGRES_PASSWORD', default="postgres"),
+#             'HOST': os.getenv('DB_HOST', default="db"),
+#             'PORT': os.getenv('DB_PORT', default="5432")
+#         }
+#     }
 
 
 # Password validation
@@ -97,8 +97,9 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework_simplejwt.authentication.JWTAuthentication',
-
     ],
+    'DEFAULT_SCHEMA_CLASS': 'rest_framework.schemas.AutoSchema',
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 10,
 }
 
