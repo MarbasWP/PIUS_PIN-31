@@ -1,5 +1,3 @@
-from abc import ABC
-
 from rest_framework import serializers
 from rest_framework.exceptions import NotFound
 from rest_framework.validators import UniqueValidator
@@ -31,14 +29,12 @@ class GetJWTTokenSerializer(serializers.Serializer):
     confirmation_code = serializers.CharField(required=True)
 
     def validate(self, data):
-        if not User.objects.filter(username=data.get("username")).exists():
-            raise NotFound("Ошибка: не верный username")
-        if not User.objects.filter(
-            password=data.get("confirmation_code")
-        ).exists():
-            raise serializers.ValidationError(
-                "Ошибка: не верный confirmation_code"
-            )
+        try:
+            user = User.objects.get(username=data.get("username"))
+        except User.DoesNotExist:
+            raise serializers.ValidationError({"username": "Ошибка: не верный username"})
+        if not user.check_password(data.get("confirmation_code")):
+            raise serializers.ValidationError({"confirmation_code": "Ошибка: не верный confirmation_code"})
         return data
 
 
@@ -49,7 +45,5 @@ class UserViewSerializer(serializers.ModelSerializer):
             "username",
             "email",
             "first_name",
-            "last_name",
-            "bio",
-            "role",
+            "last_name"
         )
