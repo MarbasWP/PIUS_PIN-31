@@ -12,22 +12,6 @@ from users.models import User
 from .permissions import IsAdmin
 from .serializers import (AuthSignupSerializer, GetJWTTokenSerializer, UserViewSerializer)
 
-EMAIL_TITLE = "Приветствуем {}"
-EMAIL_MESSAGE = "Ваш секретный код: {}"
-
-
-class MyMixinsSet(
-    viewsets.GenericViewSet,
-    mixins.ListModelMixin,
-    mixins.CreateModelMixin,
-    mixins.DestroyModelMixin,
-):
-    pagination_class = LimitOffsetPagination
-    permission_classes = (IsAdmin,)
-    filter_backends = (filters.SearchFilter,)
-    search_fields = ("name",)
-    lookup_field = "slug"
-
 
 class AuthSignupView(views.APIView):
     """Класс для регистрации новых пользователей."""
@@ -38,23 +22,27 @@ class AuthSignupView(views.APIView):
             email=request.data.get("email"),
         ).exists()
         if username_and_email_exists:
-            return Response(request.data, status=status.HTTP_200_OK)
+            return Response({'detail': 'Пользователь с таким username и email уже существует.'},
+                            status=status.HTTP_400_BAD_REQUEST)
+
         serializer = AuthSignupSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-
-        user = User.objects.create_user(
-            serializer.data.get("username"),
-            email=serializer.data.get("email"),
-        )
-        send_mail(
-            EMAIL_TITLE.format(serializer.data.get("username")),
-            EMAIL_MESSAGE.format(user.password),
-            settings.ADMINS_EMAIL,
-            [serializer.data.get("email")],
-            fail_silently=False,
-        )
-
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        if serializer.is_valid(raise_exception=True):
+            user = User.objects.create_user(
+                username=serializer.validated_data.get("username"),
+                email=serializer.validated_data.get("email"),
+            )
+            secret_code = User.objects.make_random_password()
+            user.set_password(secret_code)
+            user.save()
+            return Response(
+                {
+                    'username': user.username,
+                    'email': user.email,
+                    'secret_code': secret_code,
+                },
+                status=status.HTTP_201_CREATED
+            )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class GetJWTTokenView(views.APIView):
@@ -66,11 +54,11 @@ class GetJWTTokenView(views.APIView):
     def post(self, request):
         serializer = GetJWTTokenSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        user = get_object_or_404(
-            User, password=serializer.data.get("confirmation_code")
-        )
-        refresh = RefreshToken.for_user(user)
 
+        user = get_object_or_404(User, username=serializer.data.get("username"))
+        if not user.check_password(serializer.data.get("confirmation_code")):
+            return Response({"detail": "Ошибка: не верный confirmation_code"}, status=status.HTTP_400_BAD_REQUEST)
+        refresh = RefreshToken.for_user(user)
         return Response(
             {"token": str(refresh.access_token)},
             status=status.HTTP_201_CREATED,
@@ -80,7 +68,7 @@ class GetJWTTokenView(views.APIView):
 class UsersViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserViewSerializer
-    permission_classes = (IsAdmin, permissions.IsAuthenticated)
+    permission_classes = (permissions.IsAuthenticated,)
     pagination_class = LimitOffsetPagination
     filter_backends = (filters.SearchFilter,)
     search_fields = ("username",)
@@ -114,9 +102,6 @@ class UsersViewSet(viewsets.ModelViewSet):
             request.user, data=request.data, partial=True
         )
         serializer.is_valid(raise_exception=True)
-
-        # если пользователь admin, то можно менять поле role,
-        # в остальных случаях нельзя
         if request.user.is_admin:
             serializer.save()
         else:
