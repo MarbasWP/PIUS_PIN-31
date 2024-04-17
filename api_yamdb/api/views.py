@@ -9,9 +9,7 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from users.models import User
 
-from .permissions import IsAdmin
 from .serializers import (AuthSignupSerializer, GetJWTTokenSerializer, UserViewSerializer)
-
 
 class AuthSignupView(views.APIView):
     """Класс для регистрации новых пользователей."""
@@ -68,7 +66,7 @@ class GetJWTTokenView(views.APIView):
 class UsersViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserViewSerializer
-    permission_classes = (permissions.IsAuthenticated,)
+    permission_classes = permissions.IsAuthenticated
     pagination_class = LimitOffsetPagination
     filter_backends = (filters.SearchFilter,)
     search_fields = ("username",)
@@ -101,10 +99,3 @@ class UsersViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(
             request.user, data=request.data, partial=True
         )
-        serializer.is_valid(raise_exception=True)
-        if request.user.is_admin:
-            serializer.save()
-        else:
-            serializer.save(role=self.request.user.role)
-
-        return Response(serializer.data, status=status.HTTP_200_OK)
