@@ -9,7 +9,6 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from users.models import User
 
-from .permissions import IsAdmin
 from .serializers import (AuthSignupSerializer, GetJWTTokenSerializer, UserViewSerializer)
 
 EMAIL_TITLE = "Приветствуем {}"
@@ -23,7 +22,6 @@ class MyMixinsSet(
     mixins.DestroyModelMixin,
 ):
     pagination_class = LimitOffsetPagination
-    permission_classes = (IsAdmin,)
     filter_backends = (filters.SearchFilter,)
     search_fields = ("name",)
     lookup_field = "slug"
@@ -80,7 +78,7 @@ class GetJWTTokenView(views.APIView):
 class UsersViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserViewSerializer
-    permission_classes = (IsAdmin, permissions.IsAuthenticated)
+    permission_classes = permissions.IsAuthenticated
     pagination_class = LimitOffsetPagination
     filter_backends = (filters.SearchFilter,)
     search_fields = ("username",)
@@ -114,12 +112,3 @@ class UsersViewSet(viewsets.ModelViewSet):
             request.user, data=request.data, partial=True
         )
         serializer.is_valid(raise_exception=True)
-
-        # если пользователь admin, то можно менять поле role,
-        # в остальных случаях нельзя
-        if request.user.is_admin:
-            serializer.save()
-        else:
-            serializer.save(role=self.request.user.role)
-
-        return Response(serializer.data, status=status.HTTP_200_OK)
