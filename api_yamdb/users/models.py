@@ -5,11 +5,8 @@ from django.db import models
 
 class User(AbstractUser):
     """Класс переопределяет и расширяет стандартную модель User."""
-
-    USERNAME_ERR_MESS = (
-        "Содержание поля 'username' не соответствует "
-        "паттерну '^[\\w.@+-]+\\z'"
-    )
+    USERNAME_FIELD = 'email'
+    REQUIRED_FIELDS = ['username', 'first_name', 'last_name']
 
     username = models.CharField(
         max_length=150,
@@ -17,8 +14,7 @@ class User(AbstractUser):
         unique=True,
         validators=[
             RegexValidator(
-                regex=r"^[\w.@+-]+\Z",
-                message=USERNAME_ERR_MESS,
+                regex=r"^[\w.@+-]+\Z"
             )
         ],
     )
